@@ -1,0 +1,100 @@
+dataset:
+  name: "Leukemia"
+  input_folder: "/home/edofroses/genomics/Raw_Datasets/Leukemia_ttft"
+  label_column: "TTFT"
+
+output:
+  output_folder: "/home/edofroses/genomics/prova_training"
+  logs_folder: "/home/edofroses/genomics/prova_training"
+
+clustering:
+  strategy: "KMeans"
+  cluster_on_correlation: True
+  parameters: "searching"
+  # Se vuoi passare un dizionario, sostituisci sopra con:
+  # parameters:
+  #   distance_metric: "mahalanobis"
+  #   linkage_method: "single"
+
+n_features_candidates: 10
+scaler: "standard" #standard, minmax
+sel_feat_by: "SHAP" #or random
+shap_sampling: 200
+
+
+filters:
+  filter_type: 'AE' #or Medoid
+  autoencoder_parameters:
+    lr: 0.001
+    epochs: 100
+    AE_name: 'LinearAE'
+  medoid_parameters:
+    distance_metric: "euclidean"
+
+# Parametri per il SearchModel
+search_selector:
+  # Tipo di classificatore da utilizzare (neural_network, xgboost, random_forest, svm)
+  selector_type: "neural_network"
+  # Numero di fold per la cross-validation
+  cv: 3
+  
+  # Spazio dei parametri da esplorare
+  param_space:
+    # Parametri per Neural Network
+    neural_network:
+      hidden_layers: [1, 2, 3]
+      hidden_units: [64, 128, 256]
+      learning_rate: [0.001, 0.0001]
+      activation: ["relu", "tanh"]
+    
+    # Parametri per XGBoost
+    xgboost:
+      n_estimators: [50, 100, 200]
+      learning_rate: [0.01, 0.05, 0.1]
+      max_depth: [3, 5, 7]
+      colsample_bytree: [0.6, 0.8, 1.0]
+    
+    # Parametri per Random Forest
+    random_forest:
+      n_estimators: [50, 100, 200]
+      max_depth: [5, 10, 15, None]
+      min_samples_split: [2, 5, 10]
+    
+    # Parametri per SVM
+    svm:
+      C: [0.1, 1.0, 10.0]
+      kernel: ["linear", "rbf", "poly"]
+      gamma: ["scale", "auto", 0.1]
+
+# Parametri per il SearchModel
+search_classifier:
+  # Tipo di classificatore da utilizzare (neural_network, xgboost, random_forest, svm)
+  selector_type: "random_forest"
+  cv: 3
+  
+  # Spazio dei parametri da esplorare
+  param_space:
+    # Parametri per il random_forest
+    support_vector_machine:
+      C: [0.1, 1.0, 10.0]
+      kernel: ["linear", "rbf", "poly"]
+      gamma: ["scale", "auto", 0.1]
+
+    decision_tree:
+      max_depth: [5, 10, 15, None]
+      min_samples_split: [2, 5, 10]
+
+    random_forest:
+      n_estimators: [50, 100, 200]
+      max_depth: [5, 10, 15, None]
+      min_samples_split: [2, 5, 10]
+    
+    NaiveBayes:
+      var_smoothing: [1e-9, 1e-8, 1e-7]
+
+    ZeroR:
+      # Non ha parametri da ottimizzare
+      pass
+
+
+    
