@@ -6,7 +6,7 @@ from .tools import ClusteringLogger, evaluate_cluster, compute_feature_distances
 import matplotlib.pyplot as plt
 
 
-def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering, mode='searching', output_dir='dataset_training', number_of_clusters=None):
+def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering, mode='searching', output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue il clustering gerarchico e valuta i risultati con diverse metriche"""
     
     distance_metric = params_hierarchical_clustering['distance_metric']
@@ -25,8 +25,8 @@ def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering
 
     if number_of_clusters is not None:
         # Se il numero di cluster è specificato, usalo direttamente
-        min_clusters = max(2, number_of_clusters - 5)
-        max_clusters = number_of_clusters + 5
+        min_clusters = max(2, number_of_clusters - range_n_clusters)
+        max_clusters = number_of_clusters + range_n_clusters
         min_features_per_cluster = max(2, num_features // max_clusters)
         max_features_per_cluster = max(2, num_features // min_clusters)
     else:
@@ -93,10 +93,11 @@ def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering
         
     return final_df
         
-def params_search_hierarchical_clustering(df, output_dir='dataset_training', number_of_clusters=None):
+def params_search_hierarchical_clustering(df, output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue la ricerca dei migliori parametri per Hierarchical Clustering"""
     
-    metric_feature_distance = ['euclidean', 'pearson', 'cosine', 'spearman']
+    #metric_feature_distance = ['euclidean', 'pearson', 'cosine', 'spearman']
+    metric_feature_distance = ['euclidean']
     method_linkage = ['ward', 'single', 'complete', 'average']
     logger = ClusteringLogger(log_filename="hierarchical_clustering_search.log", log_dir=os.path.join(output_dir,'clustering_searh_logs'))
     
@@ -106,7 +107,7 @@ def params_search_hierarchical_clustering(df, output_dir='dataset_training', num
               for linkage in method_linkage]
     
     # Esegui la ricerca in parallelo
-    jobs = [delayed(group_features_by_hierarchical_clustering)(df, p, mode = 'searching', output_dir = output_dir, number_of_clusters=number_of_clusters) for p in params]
+    jobs = [delayed(group_features_by_hierarchical_clustering)(df, p, mode = 'searching', output_dir = output_dir, number_of_clusters=number_of_clusters, range_n_clusters=range_n_clusters) for p in params]
     results = Parallel(n_jobs=-1, verbose=1)(jobs)
     
     for result in results:

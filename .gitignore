@@ -3,3 +3,5 @@ Raw_Datasets/
 prova_output/
 .vscode/
 __pycache__/
+output_experiments/
+configs_paper/

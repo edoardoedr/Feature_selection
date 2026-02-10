@@ -6,7 +6,7 @@ from joblib import Parallel, delayed
 import os
 import matplotlib.pyplot as plt
 
-def group_features_by_dbscan(df, params_dbscan, mode='searching', output_dir='dataset_training', number_of_clusters=None):
+def group_features_by_dbscan(df, params_dbscan, mode='searching', output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue il clustering DBSCAN e valuta i risultati con diverse metriche"""
     
     eps = params_dbscan['eps']
@@ -26,8 +26,8 @@ def group_features_by_dbscan(df, params_dbscan, mode='searching', output_dir='da
     
     if number_of_clusters is not None:
         # Se il numero di cluster è specificato, usalo direttamente
-        min_clusters = max(2, number_of_clusters - 5)
-        max_clusters = number_of_clusters + 5
+        min_clusters = max(2, number_of_clusters - range_n_clusters)
+        max_clusters = number_of_clusters + range_n_clusters
         min_features_per_cluster = max(2, num_features // max_clusters)
         max_features_per_cluster = max(2, num_features // min_clusters)
     else:
@@ -83,7 +83,7 @@ def group_features_by_dbscan(df, params_dbscan, mode='searching', output_dir='da
         
     return final_df
 
-def params_search_dbscan(df, output_dir='dataset_training', number_of_clusters=None):
+def params_search_dbscan(df, output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue la ricerca dei migliori parametri per DBSCAN"""
     
     eps_values = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -98,7 +98,7 @@ def params_search_dbscan(df, output_dir='dataset_training', number_of_clusters=N
               for metric in metric_distance]
     
     # Esegui la ricerca in parallelo
-    jobs = [delayed(group_features_by_dbscan)(df, p, mode='searching', output_dir=output_dir, number_of_clusters=number_of_clusters) for p in params]
+    jobs = [delayed(group_features_by_dbscan)(df, p, mode='searching', output_dir=output_dir, number_of_clusters=number_of_clusters, range_n_clusters=range_n_clusters) for p in params]
     results = Parallel(n_jobs=-1, verbose=1)(jobs)
     
     for result in results:

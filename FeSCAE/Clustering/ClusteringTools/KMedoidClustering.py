@@ -10,15 +10,15 @@ import matplotlib.pyplot as plt
 import random
 
 
-def group_features_by_kmedoids(df, params_kmedoids, mode='searching', output_dir='dataset_training', number_of_clusters=None):
+def group_features_by_kmedoids(df, params_kmedoids, mode='searching', output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue il clustering KMedoids e valuta i risultati con diverse metriche"""
     
     num_features = df.shape[1]
     num_patients = df.shape[0]
     if number_of_clusters is not None:
         # Se il numero di cluster è specificato, usalo direttamente
-        min_clusters = max(2, number_of_clusters - 5)
-        max_clusters = number_of_clusters + 5
+        min_clusters = max(2, number_of_clusters - range_n_clusters)
+        max_clusters = number_of_clusters + range_n_clusters
         min_features_per_cluster = max(2, num_features // max_clusters)
         max_features_per_cluster = max(2, num_features // min_clusters)
     else:
@@ -151,7 +151,7 @@ def group_features_by_kmedoids(df, params_kmedoids, mode='searching', output_dir
     return final_df
 
 
-def params_search_kmedoids(df, output_dir='dataset_training', number_of_clusters=None):
+def params_search_kmedoids(df, output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue la ricerca dei migliori parametri per KMedoids"""
     
     metric_types = ['euclidean', 'cosine', 'pearson', 'spearman']
@@ -162,7 +162,7 @@ def params_search_kmedoids(df, output_dir='dataset_training', number_of_clusters
     params = [{'metric_type': metric} for metric in metric_types]
     
     # Esegui la ricerca in parallelo
-    jobs = [delayed(group_features_by_kmedoids)(df, p, mode='searching', output_dir=output_dir, number_of_clusters=number_of_clusters) for p in params]
+    jobs = [delayed(group_features_by_kmedoids)(df, p, mode='searching', output_dir=output_dir, number_of_clusters=number_of_clusters, range_n_clusters=range_n_clusters) for p in params]
     results = Parallel(n_jobs=-1, verbose=1)(jobs)
     
     for result in results:

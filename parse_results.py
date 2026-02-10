@@ -1,0 +1,204 @@
+"""
+Script per il parsing dei risultati degli esperimenti FeSCAE.
+Cerca ricorsivamente tutti i file 'featuresel_log.txt' e crea un CSV summary.
+"""
+
+import os
+import re
+import pandas as pd
+from pathlib import Path
+
+
+def parse_log_file(log_path):
+    """
+    Estrae le informazioni rilevanti da un file featuresel_log.txt.
+    
+    Args:
+        log_path: Path al file di log
+        
+    Returns:
+        dict: Dizionario con le informazioni estratte
+    """
+    with open(log_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    result = {
+        'log_path': str(log_path),
+        'dataset': None,
+        'clustering_strategy': None,
+        'number_of_clusters': None,
+        'num_selected_features': None,
+        'selected_features': None,
+        'nmi_mean': None,
+        'nmi_std': None,
+        'acc_mean': None,
+        'acc_std': None
+    }
+    
+    # Estrai dataset
+    dataset_match = re.search(r'Dataset:\s*(\S+)', content)
+    if dataset_match:
+        result['dataset'] = dataset_match.group(1)
+    
+    # Estrai strategia di clustering
+    strategy_match = re.search(r'Clustering strategy:\s*(\S+)', content)
+    if strategy_match:
+        result['clustering_strategy'] = strategy_match.group(1)
+    
+    # Estrai numero di cluster dal path (più affidabile)
+    path_parts = str(log_path).split('/')
+    for part in path_parts:
+        # Cerca pattern tipo: output_colon_10_hierarchical
+        match = re.search(r'_(\d+)_(hierarchical|kmeans)', part, re.IGNORECASE)
+        if match:
+            result['number_of_clusters'] = int(match.group(1))
+            break
+    
+    # Estrai features selezionate
+    features_match = re.search(r'Selected features:\s*(\[.*?\])', content)
+    if features_match:
+        features_str = features_match.group(1)
+        # Converti la stringa in lista
+        features_list = eval(features_str)
+        result['num_selected_features'] = len(features_list)
+        result['selected_features'] = ', '.join(features_list)
+    
+    # Estrai NMI (formato: NMI: 0.0021 ± 0.0000)
+    nmi_match = re.search(r'NMI:\s*([\d.]+)\s*±\s*([\d.]+)', content)
+    if nmi_match:
+        result['nmi_mean'] = float(nmi_match.group(1))
+        result['nmi_std'] = float(nmi_match.group(2))
+    
+    # Estrai ACC (formato: ACC: 0.5484 ± 0.0000)
+    acc_match = re.search(r'ACC:\s*([\d.]+)\s*±\s*([\d.]+)', content)
+    if acc_match:
+        result['acc_mean'] = float(acc_match.group(1))
+        result['acc_std'] = float(acc_match.group(2))
+    
+    return result
+
+
+def find_log_files(root_folder):
+    """
+    Trova ricorsivamente tutti i file 'featuresel_log.txt' nella cartella e sottocartelle.
+    
+    Args:
+        root_folder: Cartella root da cui iniziare la ricerca
+        
+    Returns:
+        list: Lista di Path ai file di log trovati
+    """
+    root_path = Path(root_folder)
+    log_files = list(root_path.rglob('featuresel_log.txt'))
+    return log_files
+
+
+def parse_all_logs(root_folder, output_csv='results_summary.csv'):
+    """
+    Parsa tutti i log nella cartella e crea un CSV summary.
+    
+    Args:
+        root_folder: Cartella root da cui iniziare la ricerca
+        output_csv: Nome del file CSV di output
+    """
+    print(f"Ricerca dei file 'featuresel_log.txt' in '{root_folder}'...")
+    
+    log_files = find_log_files(root_folder)
+    
+    if not log_files:
+        print(f"⚠ Nessun file 'featuresel_log.txt' trovato in '{root_folder}'")
+        return
+    
+    print(f"✓ Trovati {len(log_files)} file di log\n")
+    
+    results = []
+    for i, log_path in enumerate(log_files, 1):
+        print(f"[{i}/{len(log_files)}] Parsing: {log_path.relative_to(root_folder)}")
+        try:
+            result = parse_log_file(log_path)
+            results.append(result)
+        except Exception as e:
+            print(f"  ⚠ Errore nel parsing: {e}")
+    
+    if not results:
+        print("\n⚠ Nessun risultato estratto")
+        return
+    
+    # Crea DataFrame e ordina
+    df = pd.DataFrame(results)
+    
+    # Ordina per dataset, numero cluster e strategia
+    sort_columns = ['dataset', 'number_of_clusters', 'clustering_strategy']
+    sort_columns = [col for col in sort_columns if col in df.columns]
+    if sort_columns:
+        df = df.sort_values(sort_columns)
+    
+    # Salva CSV
+    df.to_csv(output_csv, index=False)
+    print(f"\n✓ CSV salvato in '{output_csv}'")
+    
+    # Stampa statistiche
+    print(f"\n{'='*80}")
+    print("RIEPILOGO")
+    print(f"{'='*80}")
+    print(f"Totale esperimenti: {len(df)}")
+    
+    if 'dataset' in df.columns:
+        print(f"\nDataset:")
+        for dataset, count in df['dataset'].value_counts().items():
+            print(f"  - {dataset}: {count} esperimenti")
+    
+    if 'clustering_strategy' in df.columns:
+        print(f"\nStrategie di clustering:")
+        for strategy, count in df['clustering_strategy'].value_counts().items():
+            print(f"  - {strategy}: {count} esperimenti")
+    
+    if 'number_of_clusters' in df.columns:
+        print(f"\nNumero di cluster:")
+        print(f"  - Min: {df['number_of_clusters'].min()}")
+        print(f"  - Max: {df['number_of_clusters'].max()}")
+        print(f"  - Valori unici: {sorted(df['number_of_clusters'].dropna().unique())}")
+    
+    if 'nmi_mean' in df.columns:
+        print(f"\nNMI medio:")
+        print(f"  - Min: {df['nmi_mean'].min():.4f}")
+        print(f"  - Max: {df['nmi_mean'].max():.4f}")
+        print(f"  - Media: {df['nmi_mean'].mean():.4f}")
+    
+    if 'acc_mean' in df.columns:
+        print(f"\nACC medio:")
+        print(f"  - Min: {df['acc_mean'].min():.4f}")
+        print(f"  - Max: {df['acc_mean'].max():.4f}")
+        print(f"  - Media: {df['acc_mean'].mean():.4f}")
+    
+    print(f"\n{'='*80}\n")
+    
+    # Mostra prime righe del DataFrame
+    print("Prime righe del CSV:")
+    cols_to_show = ['dataset', 'clustering_strategy', 'number_of_clusters', 
+                    'num_selected_features', 'nmi_mean', 'acc_mean']
+    cols_to_show = [col for col in cols_to_show if col in df.columns]
+    print(df[cols_to_show].head(10).to_string(index=False))
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Parsa i risultati degli esperimenti FeSCAE e crea un CSV summary'
+    )
+    parser.add_argument(
+        '-rf',
+        '--root_folder',
+        default='output_experiments',
+        help='Cartella root contenente i risultati (default: output_experiments)'
+    )
+    parser.add_argument(
+        '-o', '--output',
+        default='results_summary.csv',
+        help='Nome del file CSV di output (default: results_summary.csv)'
+    )
+    
+    args = parser.parse_args()
+    
+    parse_all_logs(args.root_folder, args.output)

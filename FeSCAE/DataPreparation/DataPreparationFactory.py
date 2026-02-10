@@ -1,9 +1,27 @@
 import os
-from .LeukemiaDataPreparation import LeukemiaDataPreparation
+from .LeukemiaTTFTDataPreparation import LeukemiaTTFTDataPreparation
 from .LeukemiaALLAMLDataPreparation import LeukemiaALLAMLDataPreparation
+from .ColonDataPreparation import ColonDataPreparation
+from .ProstateDataPreparation import ProstateDataPreparation
+from .LeukemiaDataPreparation import LeukemiaDataPreparation
+from .LymphomaDataPreparation import LymphomaDataPreparation
+from .TOX171DataPreparation import TOX171DataPreparation
+from .GLI85DataPreparation import GLI85DataPreparation
 import pandas as pd
 
 class DataPreparationFactory:
+    # Mappa i nomi dei dataset alle rispettive classi
+    DATASET_CLASSES = {
+        "LeukemiaTTFT": LeukemiaTTFTDataPreparation,
+        "leukemia_ALL_AML": LeukemiaALLAMLDataPreparation,
+        "Colon": ColonDataPreparation,
+        "Prostate-GE": ProstateDataPreparation,
+        "Leukemia": LeukemiaDataPreparation,
+        "Lymphoma": LymphomaDataPreparation,
+        "TOX-171": TOX171DataPreparation,
+        "GLI-85": GLI85DataPreparation,
+    }
+    
     def __init__(self, dataset_name, input_folder, output_folder, label_column=None):
         """
         Initialize the DataPreparationFactory.
@@ -68,10 +86,11 @@ class DataPreparationFactory:
         """
         labels = data[self.label_column].copy()
     
-        if not set(labels.unique()).issubset({0, 1}):
-            raise ValueError("I label devono essere 0 o 1.")
+        #if not set(labels.unique()).issubset({0, 1}):
+        #    raise ValueError("I label devono essere 0 o 1.")
         
-        self.label_balance_string = f"Label counts - class 0: {(labels == 0).sum()}, class 1: {(labels == 1).sum()}"
+        #self.label_balance_string = f"Label counts - class 0: {(labels == 0).sum()}, class 1: {(labels == 1).sum()}"
+        self.label_balance_string = "Label counts - " + ", ".join([f"class {i} : {(labels == i).sum()}" for i in labels.unique()])
         
         features_data = data.drop(['cod_pz', self.label_column], axis=1).copy()
         features = features_data.columns.values
@@ -93,20 +112,16 @@ class DataPreparationFactory:
             data, features_data, features, labels = self._prepare_data_training(data)
         else:
             # Processa e salva nuovi dati
-            if self.dataset_name == "Leukemia":
-                data_preparation = LeukemiaDataPreparation(
-                    self.input_folder, 
-                    self.output_folder, 
-                    label_column=self.label_column
-                )
-            elif self.dataset_name == "leukemia_ALL_AML":
-                data_preparation = LeukemiaALLAMLDataPreparation(
-                    self.input_folder, 
-                    self.output_folder, 
-                    label_column=self.label_column
-                )
-            else:
+            preparation_class = self.DATASET_CLASSES.get(self.dataset_name)
+            
+            if preparation_class is None:
                 raise ValueError(f"Dataset sconosciuto: {self.dataset_name}")
+            
+            data_preparation = preparation_class(
+                self.input_folder, 
+                self.output_folder, 
+                label_column=self.label_column
+            )
             
             data = data_preparation.process_data()
             data, features_data, features, labels = self._prepare_data_training(data)

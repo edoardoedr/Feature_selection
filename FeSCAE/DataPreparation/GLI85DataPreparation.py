@@ -4,9 +4,9 @@ from scipy.io import loadmat
 import numpy as np
 from .BaseDataPreparation import BaseDataPreparation
 
-class LeukemiaDataPreparation(BaseDataPreparation):
+class GLI85DataPreparation(BaseDataPreparation):
     def load_data(self):
-        return loadmat(os.path.join(self.input_folder, "leukemia.mat"))
+        return loadmat(os.path.join(self.input_folder, "GLI-85.mat"))
 
     def process_data(self):
         data_mat = self.load_data()
@@ -26,10 +26,10 @@ class LeukemiaDataPreparation(BaseDataPreparation):
     
 if __name__ == "__main__":
     input_folder = "/home/edofroses/genomics/Raw_Datasets"
-    output_folder = "/home/edofroses/genomics/prova_leukemia"
-    label_column = "label_leukemia"
+    output_folder = "/home/edofroses/genomics/prova_gli85"
+    label_column = "label_gli85"
     
-    leukemia_data_prep = LeukemiaDataPreparation(input_folder, output_folder, label_column)
-    processed_data = leukemia_data_prep.process_data()
+    gli85_data_prep = GLI85DataPreparation(input_folder, output_folder, label_column)
+    processed_data = gli85_data_prep.process_data()
     print(processed_data.head())
     print(processed_data[label_column].value_counts())

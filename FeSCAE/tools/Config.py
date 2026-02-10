@@ -19,6 +19,7 @@ class ClusteringConfig:
         self.strategy = config_dict.get('strategy', 'KMeans')
         self.cluster_on_correlation = config_dict.get('cluster_on_correlation', True)
         self.number_of_clusters = config_dict.get('number_of_clusters', None)
+        self.range_n_clusters = config_dict.get('range_n_clusters', 0)
         self._parameters = config_dict.get('parameters', "searching")
     
     @property
@@ -51,6 +52,7 @@ class AutoencoderConfig:
     lr: float = 0.001
     epochs: int = 100
     AE_name: str = 'LinearAE'
+    n_layers: int = 3
 
 @dataclass
 class MedoidConfig:

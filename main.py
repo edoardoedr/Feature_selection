@@ -2,8 +2,11 @@ from FeSCAE.DataPreparation import DataPreparationFactory
 from FeSCAE.tools import Config, LoggerFeSCAE, get_scaler
 from FeSCAE.Clustering import GetClustering
 from FeSCAE.Filters import create_filter
+from UTILS import unsupervised_evaluation
+import numpy as np
 import os
 import pandas as pd
+import argparse
 
 
 
@@ -11,7 +14,11 @@ import pandas as pd
 
 if __name__ == "__main__":
     
-    config_path = os.path.join("config_yaml", "base_config.yaml")
+    parser = argparse.ArgumentParser(description="Esegui FeSCAE con una configurazione specifica.")
+    parser.add_argument("--config", type=str, required=True, help="Percorso del file di configurazione YAML.")
+    args = parser.parse_args()
+    
+    config_path = args.config
     
     config = Config(config_path)
     logger = LoggerFeSCAE(config.output.output_folder)
@@ -33,7 +40,8 @@ if __name__ == "__main__":
                                cluster_strategy=config.clustering.strategy, 
                                cluster_parameters=config.clustering.parameters, 
                                cluster_on_correlation=config.clustering.cluster_on_correlation,
-                               number_of_clusters=config.clustering.number_of_clusters)
+                               number_of_clusters=config.clustering.number_of_clusters,
+                               range_n_clusters=config.clustering.range_n_clusters)
 
     clusters = clustering.get_clusters()
 
@@ -49,8 +57,31 @@ if __name__ == "__main__":
     print(f'feature data shape before filtering: {features_data.shape}')
     print(f'clusters shape: {clusters.shape}')
             
-    selected_features = FeatureFilter.filter(features_data, clusters) 
+    selected_features = FeatureFilter.filter(features_data, clusters)
+    
+    logger.log_message(f"Selected features: {selected_features}")
 
+    logger.log_section("VALUTAZIONE...")
+    
+    selected_features_data = data['features_data'][selected_features].copy()
+    print(f'selected features data shape: {selected_features_data.shape}')
+    labels = data['labels'].copy().values
 
+    repeats = 20
 
+    nmi_scores, acc_scores = [], []
 
+    for _ in range(repeats):
+        nmi, acc = unsupervised_evaluation.evaluation(
+            X_selected=selected_features_data,
+            n_clusters=len(np.unique(labels)),
+            y=labels
+        )
+        nmi_scores.append(nmi)
+        acc_scores.append(acc)
+
+    std_nmi = np.std(nmi_scores, ddof=1)
+    std_acc = np.std(acc_scores, ddof=1)
+
+    logger.log_message(f"NMI: {np.mean(nmi_scores):.4f} ± {std_nmi:.4f}")
+    logger.log_message(f"ACC: {np.mean(acc_scores):.4f} ± {std_acc:.4f}")

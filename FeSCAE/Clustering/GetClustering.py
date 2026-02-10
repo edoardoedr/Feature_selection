@@ -7,13 +7,14 @@ from .ClusteringTools import (group_features_by_hierarchical_clustering, params_
                              group_features_by_kmedoids, params_search_kmedoids)
 
 class GetClustering():
-    def __init__(self, data, output_folder, cluster_strategy, cluster_parameters, cluster_on_correlation, number_of_clusters=None):
+    def __init__(self, data, output_folder, cluster_strategy, cluster_parameters, cluster_on_correlation, number_of_clusters=None, range_n_clusters=0):
         self.data = data
         self.output_folder = output_folder
         self.cluster_strategy = cluster_strategy
         self.cluster_parameters = cluster_parameters
         self.cluster_on_correlation = cluster_on_correlation
         self.number_of_clusters = number_of_clusters
+        self.range_n_clusters = range_n_clusters
 
     def get_clusters(self):
         """
@@ -42,33 +43,33 @@ class GetClustering():
             
             self.data = correlation_df
 
-        if self.cluster_strategy == 'hierarchical':
+        if self.cluster_strategy == 'Hierarchical':
             if self.cluster_parameters == "searching":
-                self.cluster_parameters = params_search_hierarchical_clustering(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
-                clusters_df = group_features_by_hierarchical_clustering(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                self.cluster_parameters = params_search_hierarchical_clustering(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
+                clusters_df = group_features_by_hierarchical_clustering(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
             else:
-                clusters_df = group_features_by_hierarchical_clustering(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                clusters_df = group_features_by_hierarchical_clustering(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
 
         elif self.cluster_strategy == 'DBScan':
             if self.cluster_parameters == "searching":
-                self.cluster_parameters = params_search_dbscan(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
-                clusters_df = group_features_by_dbscan(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                self.cluster_parameters = params_search_dbscan(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
+                clusters_df = group_features_by_dbscan(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
             else:
-                clusters_df = group_features_by_dbscan(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                clusters_df = group_features_by_dbscan(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
 
         elif self.cluster_strategy == 'KMeans':
             if self.cluster_parameters == "searching":
-                self.cluster_parameters = params_search_kmeans(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
-                clusters_df = group_features_by_kmeans(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                self.cluster_parameters = params_search_kmeans(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
+                clusters_df = group_features_by_kmeans(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
             else:
-                clusters_df = group_features_by_kmeans(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                clusters_df = group_features_by_kmeans(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
 
         elif self.cluster_strategy == 'KMedoids':
             if self.cluster_parameters == "searching":
-                self.cluster_parameters = params_search_kmedoids(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
-                clusters_df = group_features_by_kmedoids(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                self.cluster_parameters = params_search_kmedoids(self.data, output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
+                clusters_df = group_features_by_kmedoids(self.data, self.cluster_parameters['params'], mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
             else:
-                clusters_df = group_features_by_kmedoids(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters)
+                clusters_df = group_features_by_kmedoids(self.data, self.cluster_parameters, mode='clustering', output_dir=self.output_folder, number_of_clusters=self.number_of_clusters, range_n_clusters=self.range_n_clusters)
 
         else:
             raise ValueError(f"Strategia di clustering sconosciuta: {self.cluster_strategy}")
