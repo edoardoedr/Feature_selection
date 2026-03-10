@@ -148,8 +148,8 @@ def group_features_by_kmeans(df, params_kmeans, mode='searching', output_dir='da
 def params_search_kmeans(df, output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue la ricerca dei migliori parametri per KMeans"""
     
-    #metric_types = ['euclidean', 'cosine', 'pearson', 'spearman']
-    metric_types = ['euclidean']
+    metric_types = ['euclidean', 'cosine', 'pearson', 'spearman']
+    #metric_types = ['euclidean']
     
     logger = ClusteringLogger(log_filename="kmeans_clustering_search.log", log_dir=os.path.join(output_dir,'clustering_searh_logs'))
     

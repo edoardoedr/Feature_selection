@@ -14,10 +14,29 @@ def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering
     
     logger = ClusteringLogger(log_filename=f"hierarchical_clustering_{distance_metric}_{linkage_method}.log", log_dir=os.path.join(output_dir,'clustering_searh_logs'))
     
-    # Calcola la matrice delle distanze tra le feature
-    distance_matrix = compute_feature_distances(df, distance_metric)
-    # Esegui il clustering gerarchico
-    Z = linkage(distance_matrix, method=linkage_method)
+    try:
+        # Calcola la matrice delle distanze tra le feature
+        distance_matrix = compute_feature_distances(df, distance_metric)
+        # Esegui il clustering gerarchico
+        Z = linkage(distance_matrix, method=linkage_method)
+    except Exception as e:
+        logger.log(f"ERRORE nel calcolo del linkage: {str(e)}")
+        logger.log(f"Parametri: distance_metric={distance_metric}, linkage_method={linkage_method}")
+        
+        # Ritorna risultati con metriche pessime per indicare il fallimento
+        bad_result = {
+            'num_clusters': number_of_clusters,
+            'silhouette_score': -1.0,  # Silhouette peggiore possibile
+            'davies_bouldin_score': 999999.0,  # Davies-Bouldin pessimo
+            'avg_features_per_cluster': 0.0,
+            'single_feature_clusters_percentage': 100.0  # Tutti cluster singoli (pessimo)
+        }
+        
+        return {
+            'params': params_hierarchical_clustering,
+            'best_result': bad_result,
+            'error': str(e)
+        }
     
     # Definizione dei limiti per il numero di cluster
     num_features = df.shape[1]
@@ -44,15 +63,34 @@ def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering
     dict_results_list = []
     # Cerca il miglior numero di cluster per entrambi gli score
     for num_clusters in range(min_clusters, max_clusters + 1):
-        clusters = fcluster(Z, num_clusters, criterion='maxclust')
-        
-        score_silhouette, avg_features_per_cluster, single_feature_clusters = evaluate_cluster(df, clusters, 'silhouette', min_features_per_cluster)
-        single_feature_clusters_percentage = single_feature_clusters / num_clusters * 100
-        score_dbs, _, _ = evaluate_cluster(df, clusters, 'davies-bouldin', min_features_per_cluster)
-        logger.log(f"Num clusters: {num_clusters}, Silhouette Score: {score_silhouette:.4f}, Davies-Bouldin Score: {score_dbs:.4f}, Avg features per cluster: {avg_features_per_cluster:.2f}, Single feature clusters %: {single_feature_clusters_percentage}")
-        dict_results = {'num_clusters': num_clusters, 'silhouette_score': score_silhouette, 'davies_bouldin_score': score_dbs, 'avg_features_per_cluster': avg_features_per_cluster, 'single_feature_clusters_percentage': single_feature_clusters_percentage}
-        dict_results_list.append(dict_results)
-        
+        try:
+            clusters = fcluster(Z, num_clusters, criterion='maxclust')
+            
+            score_silhouette, avg_features_per_cluster, single_feature_clusters = evaluate_cluster(df, clusters, 'silhouette', min_features_per_cluster)
+            single_feature_clusters_percentage = single_feature_clusters / num_clusters * 100
+            score_dbs, _, _ = evaluate_cluster(df, clusters, 'davies-bouldin', min_features_per_cluster)
+            logger.log(f"Num clusters: {num_clusters}, Silhouette Score: {score_silhouette:.4f}, Davies-Bouldin Score: {score_dbs:.4f}, Avg features per cluster: {avg_features_per_cluster:.2f}, Single feature clusters %: {single_feature_clusters_percentage}")
+            dict_results = {'num_clusters': num_clusters, 'silhouette_score': score_silhouette, 'davies_bouldin_score': score_dbs, 'avg_features_per_cluster': avg_features_per_cluster, 'single_feature_clusters_percentage': single_feature_clusters_percentage}
+            dict_results_list.append(dict_results)
+        except Exception as e:
+            logger.log(f"⚠ ERRORE nel clustering con {num_clusters} cluster: {str(e)}")
+            continue
+    
+    if not dict_results_list:
+        logger.log("⚠ ERRORE: Nessun risultato valido ottenuto nel clustering")
+        bad_result = {
+            'num_clusters': number_of_clusters if number_of_clusters else 2,
+            'silhouette_score': -1.0,
+            'davies_bouldin_score': 999999.0,
+            'avg_features_per_cluster': 0.0,
+            'single_feature_clusters_percentage': 100.0
+        }
+        return {
+            'params': params_hierarchical_clustering,
+            'best_result': bad_result,
+            'error': 'No valid clustering results'
+        }
+    
     best_result = select_best_clustering(dict_results_list)
     logger.log(f'Best result: {best_result}')
     
@@ -96,8 +134,8 @@ def group_features_by_hierarchical_clustering(df, params_hierarchical_clustering
 def params_search_hierarchical_clustering(df, output_dir='dataset_training', number_of_clusters=None, range_n_clusters=0):
     """Esegue la ricerca dei migliori parametri per Hierarchical Clustering"""
     
-    #metric_feature_distance = ['euclidean', 'pearson', 'cosine', 'spearman']
-    metric_feature_distance = ['euclidean']
+    metric_feature_distance = ['euclidean', 'pearson', 'cosine', 'spearman']
+    #metric_feature_distance = ['euclidean']
     method_linkage = ['ward', 'single', 'complete', 'average']
     logger = ClusteringLogger(log_filename="hierarchical_clustering_search.log", log_dir=os.path.join(output_dir,'clustering_searh_logs'))
     
@@ -110,9 +148,19 @@ def params_search_hierarchical_clustering(df, output_dir='dataset_training', num
     jobs = [delayed(group_features_by_hierarchical_clustering)(df, p, mode = 'searching', output_dir = output_dir, number_of_clusters=number_of_clusters, range_n_clusters=range_n_clusters) for p in params]
     results = Parallel(n_jobs=-1, verbose=1)(jobs)
     
+    # Filtra risultati con errori e logga
+    valid_results = []
     for result in results:
         logger.log(result)
-    # Trova la combinazione di parametri con il miglior Silhouette Score
+        if 'error' not in result:
+            valid_results.append(result)
+        else:
+            logger.log(f"⚠ Configurazione fallita: {result['params']} - Errore: {result.get('error', 'Unknown')}")
+
+    # Se non ci sono risultati validi, usa tutti i risultati (anche quelli con errori)
+    if not valid_results:
+        logger.log("⚠ ATTENZIONE: Nessuna configurazione valida trovata. Usando il miglior risultato disponibile tra quelli falliti.")
+        valid_results = results
     
     best_configuration = min(results, key=lambda x: x['best_result']['single_feature_clusters_percentage'])
 
