@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from .BaseDataPreparation import BaseDataPreparation
+from ..BaseDataPreparation import BaseDataPreparation
 
 class LeukemiaALLAMLDataPreparation(BaseDataPreparation):
     def __init__(self, input_folder, output_folder, cluster_strategy, cluster_parameters, label_column='cancer'):

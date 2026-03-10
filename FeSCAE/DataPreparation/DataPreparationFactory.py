@@ -1,26 +1,9 @@
 import os
-from .LeukemiaTTFTDataPreparation import LeukemiaTTFTDataPreparation
-from .LeukemiaALLAMLDataPreparation import LeukemiaALLAMLDataPreparation
-from .ColonDataPreparation import ColonDataPreparation
-from .ProstateDataPreparation import ProstateDataPreparation
-from .LeukemiaDataPreparation import LeukemiaDataPreparation
-from .LymphomaDataPreparation import LymphomaDataPreparation
-from .TOX171DataPreparation import TOX171DataPreparation
-from .GLI85DataPreparation import GLI85DataPreparation
 import pandas as pd
+from .dataset_registry import DATASET_CLASSES
 
 class DataPreparationFactory:
-    # Mappa i nomi dei dataset alle rispettive classi
-    DATASET_CLASSES = {
-        "LeukemiaTTFT": LeukemiaTTFTDataPreparation,
-        "leukemia_ALL_AML": LeukemiaALLAMLDataPreparation,
-        "Colon": ColonDataPreparation,
-        "Prostate-GE": ProstateDataPreparation,
-        "Leukemia": LeukemiaDataPreparation,
-        "Lymphoma": LymphomaDataPreparation,
-        "TOX-171": TOX171DataPreparation,
-        "GLI-85": GLI85DataPreparation,
-    }
+    DATASET_CLASSES = DATASET_CLASSES
     
     def __init__(self, dataset_name, input_folder, output_folder, label_column=None):
         """

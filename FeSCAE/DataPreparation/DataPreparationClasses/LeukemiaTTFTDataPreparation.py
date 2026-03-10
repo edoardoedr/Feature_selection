@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from .BaseDataPreparation import BaseDataPreparation
+from ..BaseDataPreparation import BaseDataPreparation
 
 class LeukemiaTTFTDataPreparation(BaseDataPreparation):
     def load_data(self):
