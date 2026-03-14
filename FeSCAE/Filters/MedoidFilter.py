@@ -33,11 +33,12 @@ class MedoidFilter:
         # Select features for the current cluster
         current_features = clusters['Feature'][clusters['Cluster'] == i_clust].values
         X = data[current_features].T.copy()
-        X_scaled = pd.DataFrame(self.scaler.fit_transform(X), index=X.index)
 
-        if X_scaled.shape[0] == 0 or X_scaled.shape[1] == 0:
+        if X.shape[0] == 0 or X.shape[1] == 0:
             self.logger.log_message(f"Skipping medoid selection for cluster {i_clust} due to empty feature set.")
             return [], None
+        
+        X_scaled = pd.DataFrame(self.scaler.fit_transform(X), index=X.index)
 
         return current_features, X_scaled
 
@@ -55,7 +56,7 @@ class MedoidFilter:
         if isinstance(data, pd.DataFrame):
             data = data.to_numpy()
         
-        distances = distance.cdist(data.T, data.T, self.distance_metric)
+        distances = distance.cdist(data, data, self.distance_metric)
         return distances
 
     def select_medoid(self, data, feature_names):
@@ -91,9 +92,12 @@ class MedoidFilter:
 
         self.logger.log_message(f'Starting medoid filtering for {n_clusters - 1} clusters')
 
-        for i in range(1, n_clusters):
+        for i in range(0, n_clusters):
             feature_names, cluster_data = self.get_data(data, clusters, i)
 
+            print(f'Cluster {i}: {len(feature_names)} features')
+            print(f'Cluster {i} data shape: {cluster_data.shape if cluster_data is not None else "N/A"}')
+            
             if cluster_data is None or len(feature_names) == 0:
                 continue
 

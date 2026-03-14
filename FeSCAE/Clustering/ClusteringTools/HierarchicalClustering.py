@@ -162,7 +162,7 @@ def params_search_hierarchical_clustering(df, output_dir='dataset_training', num
         logger.log("⚠ ATTENZIONE: Nessuna configurazione valida trovata. Usando il miglior risultato disponibile tra quelli falliti.")
         valid_results = results
     
-    best_configuration = min(results, key=lambda x: x['best_result']['single_feature_clusters_percentage'])
+    best_configuration = min(valid_results, key=lambda x: x['best_result']['single_feature_clusters_percentage'])
 
     logger.log("\n### CONFIGURAZIONE FINALE ###")
     logger.log(best_configuration)

@@ -45,9 +45,10 @@ DATASETS = {
 CLUSTERS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 STRATEGIES = ["Hierarchical", "KMeans"]
 
-CONFIGS_DIR = "configs_paper_29_datasets_no_corr"
-OUTPUT_BASE_DIR = "output_experiments_29_datasets_no_corr"
-USE_CORR_MATRIX = False
+CONFIGS_DIR = "configs_paper_29_datasets_medoid"
+OUTPUT_BASE_DIR = "output_experiments_29_datasets_medoid"
+USE_CORR_MATRIX = True
+FILTER_TYPE = "Medoid"  # "AE" o "Medoid"
 
 # Template di configurazione base
 BASE_CONFIG = {
@@ -115,6 +116,7 @@ def generate_configs():
                 config["clustering"]["strategy"] = strategy
                 config["clustering"]["number_of_clusters"] = n_clusters
                 config["clustering"]["cluster_on_correlation"] = USE_CORR_MATRIX
+                config["filters"]["filter_type"] = FILTER_TYPE
                 # Nome del file di configurazione
                 config_filename = f"config_{dataset_clean}_{n_clusters}_{strategy_lower}.yaml"
                 os.makedirs(os.path.join(CONFIGS_DIR, dataset_clean), exist_ok=True)

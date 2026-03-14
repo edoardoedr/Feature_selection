@@ -6,3 +6,4 @@ __pycache__/
 output_experiments*/
 configs*
 run_experiment_*
+error.log
