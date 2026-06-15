@@ -121,9 +121,11 @@ class LoggerFeSCAE:
         Args:
             message (str): Messaggio da registrare
         """
-        print(message)
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        formatted_message = f"[{timestamp}] {message}"
+        print(formatted_message)
         with open(self.log_path, "a") as f:
-            f.write(message + '\n')
+            f.write(formatted_message + '\n')
     
     def log_section(self, title):
         """

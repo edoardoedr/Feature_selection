@@ -50,16 +50,18 @@ class ClusteringLogger:
 
     def log(self, message, level="info"):
         """Logga un messaggio con il livello specificato."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        formatted_message = f"[{timestamp}] {message}"
         if level == "info":
-            self.logger.info(message)
+            self.logger.info(formatted_message)
         elif level == "warning":
-            self.logger.warning(message)
+            self.logger.warning(formatted_message)
         elif level == "error":
-            self.logger.error(message)
+            self.logger.error(formatted_message)
         elif level == "critical":
-            self.logger.critical(message)
+            self.logger.critical(formatted_message)
         elif level == "debug":
-            self.logger.debug(message)
+            self.logger.debug(formatted_message)
 
     def get_log_filepath(self):
         """Ritorna il percorso del file di log corrente."""

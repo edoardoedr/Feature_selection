@@ -24,6 +24,7 @@ def create_filter(filter_config, iteration, output_dir, scaler):
             iteration=iteration,
             output_dir=output_dir,
             scaler=scaler,
+            n_layers=ae_config.n_layers,
         )
     elif filter_type == 'Medoid':
         return MedoidFilter(

@@ -2,39 +2,41 @@ import torch
 import torch.nn as nn
 
 class LinearAE(nn.Module):
-    def __init__(self, n_input):
+    def __init__(self, n_input, n_layers=3):
         super(LinearAE, self).__init__()
-        
-        # Definiamo i livelli
-        self.fc1 = nn.Linear(n_input, n_input // 5)
-        self.fc2 = nn.Linear(n_input // 5, n_input // 10)
-        self.fc3 = nn.Linear(n_input // 10, n_input // 5)
-        self.fc_out = nn.Linear(n_input // 5, n_input)
-        
-        # Funzione di attivazione
+        self.n_input = n_input
+        self.n_layers = max(1, int(n_layers))
+
+        hidden_sizes = self._build_hidden_sizes(n_input, self.n_layers)
+        layer_sizes = [n_input] + hidden_sizes + list(reversed(hidden_sizes)) + [n_input]
+
+        self.layers = nn.ModuleList(
+            [nn.Linear(layer_sizes[i], layer_sizes[i + 1]) for i in range(len(layer_sizes) - 1)]
+        )
         self.relu = nn.ReLU()
-        
+
         # Inizializzazione Xavier
         self._initialize_weights()
 
+    def _build_hidden_sizes(self, n_input, n_layers):
+        hidden_sizes = []
+        current_size = max(1, n_input // 2)
+
+        for _ in range(n_layers):
+            hidden_sizes.append(max(1, current_size))
+            current_size = max(1, current_size // 2)
+
+        return hidden_sizes
+
     def _initialize_weights(self):
-        # Applica inizializzazione Xavier ai pesi dei livelli fully connected
-        nn.init.xavier_uniform_(self.fc1.weight)
-        nn.init.xavier_uniform_(self.fc2.weight)
-        nn.init.xavier_uniform_(self.fc3.weight)
-        nn.init.xavier_uniform_(self.fc_out.weight)
-        
-        # Imposta i bias a zero
-        nn.init.zeros_(self.fc1.bias)
-        nn.init.zeros_(self.fc2.bias)
-        nn.init.zeros_(self.fc3.bias)
-        nn.init.zeros_(self.fc_out.bias)
+        for layer in self.layers:
+            nn.init.xavier_uniform_(layer.weight)
+            nn.init.zeros_(layer.bias)
     
     def forward(self, x):
-        # Applicazione dei livelli e attivazioni
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.relu(self.fc3(x))
-        x = self.fc_out(x)  # Livello finale con attivazione lineare (default)
+        for layer in self.layers[:-1]:
+            x = self.relu(layer(x))
+
+        x = self.layers[-1](x)
         
         return x

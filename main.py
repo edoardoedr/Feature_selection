@@ -85,3 +85,5 @@ if __name__ == "__main__":
 
     logger.log_message(f"NMI: {np.mean(nmi_scores):.4f} ± {std_nmi:.4f}")
     logger.log_message(f"ACC: {np.mean(acc_scores):.4f} ± {std_acc:.4f}")
+    
+    logger.log_section("RISULTATI FILTRO")

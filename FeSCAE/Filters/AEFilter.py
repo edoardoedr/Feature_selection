@@ -12,16 +12,18 @@ torch.manual_seed(SEED)
 random.seed(SEED)
 
 class AEFilter:
-    def __init__(self, lr, epoch, model_name, iteration, output_dir, scaler):
+    def __init__(self, lr, epoch, model_name, iteration, output_dir, scaler, n_layers=None):
         self.model_name = model_name
         self.model = None
         self.lr = lr
         self.epoch = epoch
         self.iteration = iteration
         self.best_weights = None
+        self.best_n_layers = None
         self.output_dir = output_dir
         self.logger = FilterLogger(iteration, output_dir=output_dir)
         self.scaler = scaler
+        self.n_layers = n_layers if n_layers is not None else [1, 2, 3, 4]
 
     def get_data(self, data, clusters, i_clust):
         # Seleziona i geni del cluster corrente
@@ -41,12 +43,49 @@ class AEFilter:
         
         return X_scaled.shape[1], X_tensor, X_scaled
 
-    def create_model(self, input_size):
+    def create_model(self, input_size, n_layers):
         if self.model_name == "LinearAE":
-            model = LinearAE(input_size)  # Assumo che LinearAE sia definito altrove
+            model = LinearAE(input_size, n_layers=n_layers)
         else:
             raise ValueError(f"Modello {self.model_name} non supportato.")
         return model
+
+    def train_model(self, model, X_tensor):
+        optimizer = optim.Adam(model.parameters(), lr=self.lr)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode='min',
+            factor=0.5,
+            patience=5,
+            min_lr=max(self.lr * 1e-3, 1e-6),
+        )
+        loss_fn = nn.L1Loss()
+        best_acc = float('inf')
+        best_weights = None
+
+        for epoch in range(self.epoch):
+            model.train()
+            optimizer.zero_grad()
+
+            outputs = model(X_tensor)
+            loss = loss_fn(outputs, X_tensor)
+            loss.backward()
+            optimizer.step()
+
+            scheduler.step(loss.item())
+
+            accuracy = torch.mean(torch.abs(outputs - X_tensor)).item()
+            current_lr = optimizer.param_groups[0]['lr']
+            self.logger.log_training_progress(epoch, self.epoch, loss.item(), accuracy, current_lr)
+
+            if accuracy < best_acc:
+                best_acc = accuracy
+                best_weights = copy.deepcopy(model.state_dict())
+
+        if best_weights is not None:
+            model.load_state_dict(best_weights)
+
+        return model, best_acc
 
     def fit(self, data, clusters, i_clust):
         # Prepara i dati e il modello
@@ -59,39 +98,24 @@ class AEFilter:
             return None
         
         self.logger.log_cluster_start(i_clust, num_feat)
-        torch.manual_seed(SEED)
-        random.seed(SEED)
-        self.model = self.create_model(num_feat)
 
-        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-        loss_fn = nn.L1Loss()
+        candidate_layers = self.n_layers if isinstance(self.n_layers, list) else [self.n_layers]
+        best_model = None
         best_acc = float('inf')
 
-        for epoch in range(self.epoch):
-            self.model.train()
-            optimizer.zero_grad()
+        for n_layers in candidate_layers:
+            torch.manual_seed(SEED)
+            random.seed(SEED)
+            model = self.create_model(num_feat, n_layers)
+            model, acc = self.train_model(model, X_tensor)
 
-            outputs = self.model(X_tensor)
-            loss = loss_fn(outputs, X_tensor)
-            loss.backward()
-            optimizer.step()
+            if acc < best_acc:
+                best_acc = acc
+                best_model = model
+                self.best_n_layers = n_layers
 
-            # Valutazione dell'accuratezza (MAE tra input e output)
-            accuracy = torch.mean(torch.abs(outputs - X_tensor)).item()
-
-            # Log del progresso di addestramento
-            self.logger.log_training_progress(epoch, self.epoch, loss.item(), accuracy)
-
-            # Se è il miglior modello, salva i pesi
-            if accuracy < best_acc:
-                best_acc = accuracy
-                self.best_weights = copy.deepcopy(self.model.state_dict())
-                
-            # Stampa opzionale del progresso
-            # print(f"Epoca: {epoch}, Loss: {loss.item()}, Accurattezza: {accuracy}")
-
-        # Carica i migliori pesi
-        self.model.load_state_dict(self.best_weights)
+        self.model = best_model
+        self.best_weights = copy.deepcopy(self.model.state_dict()) if self.model is not None else None
 
         # Previsione e selezione del miglior gene
         preds = self.predict(X_tensor)
@@ -102,6 +126,7 @@ class AEFilter:
         selected_error = torch.mean(torch.abs(X_tensor[selected_idx] - preds[selected_idx])).item()
         
         # Log della feature selezionata
+        self.logger.log_message(f"Best n_layers for cluster {i_clust}: {self.best_n_layers}")
         self.logger.log_feature_selection(i_clust, selected_gene, selected_error)
 
 

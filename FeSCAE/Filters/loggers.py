@@ -29,9 +29,11 @@ class FilterLogger:
     
     def log_message(self, message):
         """Registra un messaggio generico nel log"""
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        formatted_message = f"[{timestamp}] {message}"
         with open(self.log_path, 'a') as f:
-            f.write(f"{message}\n")
-        print(message)
+            f.write(f"{formatted_message}\n")
+        print(formatted_message)
     
     def log_cluster_start(self, cluster_id, num_features):
         """
@@ -49,7 +51,7 @@ class FilterLogger:
         )
         self.log_message(message)
     
-    def log_training_progress(self, epoch, total_epochs, loss, accuracy):
+    def log_training_progress(self, epoch, total_epochs, loss, accuracy, lr=None):
         """
         Registra il progresso dell'addestramento.
         
@@ -58,10 +60,13 @@ class FilterLogger:
             total_epochs (int): Numero totale di epoche
             loss (float): Valore della loss
             accuracy (float): Accuratezza (errore MAE)
+            lr (float, optional): Learning rate corrente
         """
         # Registra ogni 10 epoche o all'ultima epoca
         if epoch % 10 == 0 or epoch == total_epochs - 1:
             message = f"Epoca: {epoch+1}/{total_epochs}, Loss: {loss:.6f}, Errore MAE: {accuracy:.6f}"
+            if lr is not None:
+                message += f", LR: {lr:.6e}"
             self.log_message(message)
     
     def log_feature_selection(self, cluster_id, selected_feature, error):

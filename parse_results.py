@@ -3,10 +3,47 @@ Script per il parsing dei risultati degli esperimenti FeSCAE.
 Cerca ricorsivamente tutti i file 'featuresel_log.txt' e crea un CSV summary.
 """
 
-import os
+import ast
 import re
-import pandas as pd
+from datetime import datetime
 from pathlib import Path
+
+import pandas as pd
+
+
+TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _parse_timestamp(text):
+    """Converte una stringa timestamp nel formato usato nei log."""
+    if not text:
+        return None
+
+    try:
+        return datetime.strptime(text, TIMESTAMP_FORMAT)
+    except ValueError:
+        return None
+
+
+def _extract_line_timestamp(line):
+    """Estrae il timestamp da una riga del log, se presente."""
+    match = re.match(r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]', line)
+    if match:
+        return _parse_timestamp(match.group(1))
+
+    match = re.search(r'Esecuzione iniziata:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', line)
+    if match:
+        return _parse_timestamp(match.group(1))
+
+    return None
+
+
+def _format_seconds(delta):
+    """Restituisce la durata in secondi, arrotondata al secondo più vicino."""
+    if delta is None:
+        return None
+
+    return round(delta.total_seconds(), 3)
 
 
 def parse_log_file(log_path):
@@ -20,7 +57,17 @@ def parse_log_file(log_path):
         dict: Dizionario con le informazioni estratte
     """
     with open(log_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+        lines = f.readlines()
+
+    content = ''.join(lines)
+
+    timestamps = []
+    pending_timestamp = None
+    execution_start = None
+    load_start = None
+    clustering_start = None
+    filtering_start = None
+    evaluation_start = None
     
     result = {
         'log_path': str(log_path),
@@ -32,8 +79,30 @@ def parse_log_file(log_path):
         'nmi_mean': None,
         'nmi_std': None,
         'acc_mean': None,
-        'acc_std': None
+        'acc_std': None,
+        'load_data_duration_sec': None,
+        'clustering_duration_sec': None,
+        'filtering_duration_sec': None,
+        'evaluation_duration_sec': None,
+        'total_duration_sec': None
     }
+
+    for line in lines:
+        line_timestamp = _extract_line_timestamp(line)
+        if line_timestamp is not None:
+            timestamps.append(line_timestamp)
+            pending_timestamp = line_timestamp
+
+        if 'Esecuzione iniziata:' in line and execution_start is None:
+            execution_start = line_timestamp
+        elif 'CARICAMENTO DATI' in line and load_start is None:
+            load_start = pending_timestamp
+        elif 'CLUSTERING...' in line and clustering_start is None:
+            clustering_start = pending_timestamp
+        elif 'FILTERING...' in line and filtering_start is None:
+            filtering_start = pending_timestamp
+        elif 'VALUTAZIONE...' in line and evaluation_start is None:
+            evaluation_start = pending_timestamp
     
     # Estrai dataset
     dataset_match = re.search(r'Dataset:\s*(\S+)', content)
@@ -59,7 +128,7 @@ def parse_log_file(log_path):
     if features_match:
         features_str = features_match.group(1)
         # Converti la stringa in lista
-        features_list = eval(features_str)
+        features_list = ast.literal_eval(features_str)
         result['num_selected_features'] = len(features_list)
         result['selected_features'] = ', '.join(features_list)
     
@@ -74,6 +143,28 @@ def parse_log_file(log_path):
     if acc_match:
         result['acc_mean'] = float(acc_match.group(1))
         result['acc_std'] = float(acc_match.group(2))
+
+    # Calcola i tempi di esecuzione dai timestamp del log
+    last_timestamp = timestamps[-1] if timestamps else None
+
+    if load_start and clustering_start:
+        result['load_data_duration_sec'] = _format_seconds(clustering_start - load_start)
+
+    if clustering_start and filtering_start:
+        result['clustering_duration_sec'] = _format_seconds(filtering_start - clustering_start)
+
+    if filtering_start and evaluation_start:
+        result['filtering_duration_sec'] = _format_seconds(evaluation_start - filtering_start)
+
+    if evaluation_start and last_timestamp:
+        evaluation_duration = last_timestamp - evaluation_start
+        if evaluation_duration.total_seconds() >= 0:
+            result['evaluation_duration_sec'] = _format_seconds(evaluation_duration)
+
+    if execution_start and last_timestamp:
+        total_duration = last_timestamp - execution_start
+        if total_duration.total_seconds() >= 0:
+            result['total_duration_sec'] = _format_seconds(total_duration)
     
     return result
 
@@ -135,6 +226,7 @@ def parse_all_logs(root_folder, output_csv='results_summary.csv'):
     
     # Salva CSV
     df.to_csv(output_csv, index=False)
+    df.to_excel(output_csv.replace('.csv', '.xlsx'), index=False)  # Salva anche in Excel
     print(f"\n✓ CSV salvato in '{output_csv}'")
     
     # Stampa statistiche
