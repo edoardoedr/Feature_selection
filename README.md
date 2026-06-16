@@ -131,7 +131,7 @@ filters:
   autoencoder_parameters:
     lr: 0.001          # Learning rate
     epochs: 100        # Numero di epoche di training
-    AE_name: 'LinearAE'  # Tipo di autoencoder
+    AE_name: 'AE'  # Tipo di autoencoder
   
   # Parametri per Medoid
   medoid_parameters:

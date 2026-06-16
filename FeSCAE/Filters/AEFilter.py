@@ -24,6 +24,7 @@ class AEFilter:
         self.logger = FilterLogger(iteration, output_dir=output_dir)
         self.scaler = scaler
         self.n_layers = n_layers if n_layers is not None else [1, 2, 3, 4]
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def get_data(self, data, clusters, i_clust):
         # Seleziona i geni del cluster corrente
@@ -40,12 +41,14 @@ class AEFilter:
         X_scaled = pd.DataFrame(self.scaler.fit_transform(X), index=X.index)
         # Converte i dati in tensori
         X_tensor = torch.tensor(X_scaled.to_numpy(), dtype=torch.float32)
+        X_tensor = X_tensor.to(self.device)
         
         return X_scaled.shape[1], X_tensor, X_scaled
 
     def create_model(self, input_size, n_layers):
         if self.model_name == "LinearAE":
             model = LinearAE(input_size, n_layers=n_layers)
+            model.to(self.device)
         else:
             raise ValueError(f"Modello {self.model_name} non supportato.")
         return model
