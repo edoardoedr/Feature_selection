@@ -142,6 +142,10 @@ filters:
 - `AE`: Utilizza un autoencoder per selezionare features rappresentative da ogni cluster
 - `Medoid`: Seleziona il medoid (elemento più centrale) di ogni cluster
 
+Per il filtro `AE` è inoltre possibile effettuare la ricerca degli iperparametri dei
+layer dell'autoencoder, così da individuare la configurazione dell'architettura più
+adatta al dataset.
+
 ## 📊 Dataset Supportati
 
 Il framework include preprocessing già implementati per i seguenti dataset:
@@ -234,6 +238,7 @@ prova_output/
 
 - I dati preprocessati vengono salvati automaticamente: alle esecuzioni successive verranno ricaricati direttamente
 - Il sistema supporta ricerca automatica dei parametri ottimali di clustering
+- Per gli autoencoder è disponibile anche la ricerca degli iperparametri dei layer dell'architettura
 - Gli autoencoder utilizzati sono personalizzabili (Linear, Convolutional, ecc.)
 - Il framework è estendibile con nuovi algoritmi di clustering e filtri
 
