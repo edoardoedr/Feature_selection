@@ -7,6 +7,7 @@
 
 CONFIG_DIR="$1"
 N_JOBS="${2:-1}"
+export PYTHON_ENV="/home/edofroses/.conda/envs/genomics_env/bin/python"
 
 if [ -z "$CONFIG_DIR" ]; then
     echo "Uso: $0 <cartella_config> [n_paralleli]"
@@ -26,7 +27,7 @@ echo "Config trovati: $TOTAL - job in parallelo: $N_JOBS"
 
 run_one() {
     name=$(basename "$1" .yaml)
-    if python main.py --config "$1" > "run_logs/$name.log" 2>&1; then
+    if "$PYTHON_ENV" main.py --config "$1" > "run_logs/$name.log" 2>&1; then
         status="OK  "
     else
         status="FAIL"
