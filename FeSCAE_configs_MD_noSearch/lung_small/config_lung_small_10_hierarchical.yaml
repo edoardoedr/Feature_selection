@@ -1,0 +1,25 @@
+clustering:
+  cluster_on_correlation: true
+  number_of_clusters: 10
+  parameters:
+    distance_metric: euclidean
+    linkage_method: average
+  range_n_clusters: 0
+  strategy: Hierarchical
+dataset:
+  input_folder: data/
+  label_column: label_lung_small
+  name: lung_small
+  scaler: standard
+filters:
+  autoencoder_parameters:
+    AE_name: LinearAE
+    epochs: 100
+    lr: 0.001
+    n_layers: 2
+  filter_type: Medoid
+  medoid_parameters:
+    distance_metric: euclidean
+output:
+  logs_folder: Model_results/FeSCMD_noSearch/results_FeSCMD_lung_small/output_lung_small_10_hierarchical
+  output_folder: Model_results/FeSCMD_noSearch/results_FeSCMD_lung_small/output_lung_small_10_hierarchical
