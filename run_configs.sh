@@ -17,17 +17,18 @@ fi
 # I path nei config sono relativi alla root del progetto
 cd "$(dirname "$0")"
 
-mkdir -p run_logs
-
 export TOTAL=$(find "$CONFIG_DIR" -name "*.yaml" | wc -l | tr -d ' ')
-export DONE_FILE="run_logs/.done"
-: > "$DONE_FILE"
+export DONE_FILE=$(mktemp)
 
 echo "Config trovati: $TOTAL - job in parallelo: $N_JOBS"
 
 run_one() {
     name=$(basename "$1" .yaml)
-    if "$PYTHON_ENV" main.py --config "$1" > "run_logs/$name.log" 2>&1; then
+    # Il log del terminale va nella output_folder del config
+    out_dir=$(grep "output_folder:" "$1" | awk '{print $2}')
+    mkdir -p "$out_dir"
+    log="$out_dir/run_$name.log"
+    if "$PYTHON_ENV" main.py --config "$1" > "$log" 2>&1; then
         status="OK  "
     else
         status="FAIL"
@@ -40,10 +41,11 @@ run_one() {
     filled=$(( done * width / TOTAL ))
     bar=$(printf "%${filled}s" | tr " " "#")$(printf "%$(( width - filled ))s" | tr " " "-")
     echo "[$bar] $done/$TOTAL ($(( done * 100 / TOTAL ))%) [$status] $name"
+    [ "$status" = "FAIL" ] && echo "    -> vedi $log"
 }
 export -f run_one
 
 find "$CONFIG_DIR" -name "*.yaml" | sort | xargs -P "$N_JOBS" -I {} bash -c 'run_one "$1"' _ {}
 
 rm -f "$DONE_FILE"
-echo "Finito. Log in run_logs/"
+echo "Finito. Log nelle output_folder dei config (run_<nome_config>.log)"

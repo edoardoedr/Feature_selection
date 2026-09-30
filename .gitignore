@@ -8,3 +8,4 @@ configs*
 run_experiment_*
 error.log
 Model_results/*
+run_logs/*
