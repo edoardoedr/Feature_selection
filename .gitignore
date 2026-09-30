@@ -7,3 +7,4 @@ output_experiments*/
 configs*
 run_experiment_*
 error.log
+Model_results/*
